@@ -1,0 +1,118 @@
+// Class that represents the Contact Object
+public with sharing class testContact {
+
+    // class variables defined
+    public String sObjectID;
+    public String fName;
+    public String lName;
+    public String externalID;
+    public String accountID;
+    public String deductionCode;
+    public String memberStatus;
+    public String planType;
+    public Date startDate;
+    public String importFileID;
+
+    // First constructor that allows you to instantiate a new Contact 
+    public testContact(String firstN, String lastN, String extId, String deductCode, String mStatus, String pType, Date sDate, String importID) {
+        // set the class variables
+        this.fName = firstN;
+        this.lName = lastN;
+        this.externalID = extId;
+        this.deductionCode = deductCode;
+        this.memberStatus = mStatus;
+        this.planType = pType;
+        this.startDate = sDate;
+        this.importFileID = importID;
+    }
+
+    // Second constructor that allows you to instantiate a new Contact based on an existing Contact 
+    // with matching externalID 
+     public testContact(String externalID) {
+        
+        // Query for an existing Contact with matching externalID and instantiate a new Contact based 
+        // on an existing Contact External_ID__c
+        Contact ContactPersonSObject = 
+			[SELECT ID, External_ID__c, AccountID, FirstName, LastName, Deduction_Code__c, Deduction_Start_Date__c, Member_Status__c, Plan_Type__c, Last_Import_File_ID__c 
+             FROM Contact WHERE External_ID__c =:externalID];
+
+        this.sObjectID = ContactPersonSObject.ID;
+        this.externalID = ContactPersonSObject.External_ID__c;
+        this.accountID = ContactPersonSObject.AccountID;
+        this.fName = ContactPersonSObject.FirstName;
+        this.lName = ContactPersonSObject.LastName;
+        this.memberStatus = ContactPersonSObject.Member_Status__c;
+        this.planType = ContactPersonSObject.Plan_Type__c;
+        this.deductionCode = ContactPersonSObject.Deduction_Code__c;
+        this.startDate = ContactPersonSObject.Deduction_Start_Date__c;
+        this.importFileID = ContactPersonSObject.Last_Import_File_ID__c;
+    }
+
+// public method to create a new Contact if the externalID does not exist
+    public Boolean createContact() {
+        // Use the ExternalID to verify that the Contact does not already exist in Salesforce
+        if (String.isBlank(this.sObjectID)) {
+
+            // Verify that all required fields are populated
+            if (this.allRequiredFieldsValid()) {
+                Contact newContact = new Contact();
+                newContact.FirstName = this.fName;
+                newContact.LastName = this.lName;
+                newContact.External_ID__c = this.externalID;
+                newContact.Deduction_Code__c = this.deductionCode;
+                newContact.Deduction_Start_Date__c = this.startDate;
+                newContact.Plan_Type__c = this.planType;
+                newContact.Last_Import_File_ID__c = this.importFileID;
+
+                insert newContact;
+                return true;
+
+            } else {
+                return false;
+            }
+            
+        } else {
+            return false;
+        }
+
+    }
+
+ // public method to update existing Contact if externalID is found   
+    public Boolean updateContactFields() {
+        // Verify the Contact has a Salesforce ID and therefore exists in Salesforce.
+        // If contact exists, update the contact by placing data into "holding" fields on the contact record. 
+        // We want to validate this data from an outside source before overwriting data on existing contact 
+        // records. Later, when the data from the outside source is validated we will copy the data from
+        // the holding fields to the appropriate fields on contact.
+       
+       if (String.isNotBlank(this.sObjectID)) {
+            //Validate all required fields
+            if (this.allRequiredFieldsValid()) {
+                Contact updateContact = new Contact(ID=this.sObjectID);
+                updateContact.Holding_Deduction_Code__c = this.deductionCode;
+                updateContact.Holding_Deduction_Start_Date__c = this.startDate;
+                updateContact.Holding_Plan_Type__c = this.planType;
+                updateContact.Last_Import_File_ID__c = this.importFileID;
+
+                update updateContact;
+                return true;
+
+            } else {
+                return false;
+            }
+            
+        } else {
+            return false;
+        }
+    }
+
+    //Private Method
+    private Boolean allRequiredFieldsValid () {
+        if (String.isNotBlank(this.lName) && String.isNotBlank(this.fName) && String.isNotBlank(this.externalID)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+}
